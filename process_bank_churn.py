@@ -4,39 +4,42 @@ from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
 from sklearn.model_selection import train_test_split
 from typing import Dict, Tuple, List
 
-def split_data(raw_df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
+def split_data(raw_df: pd.DataFrame, target_col: str) -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
     """
     Splits the raw dataframe into training and validation datasets.
 
     Args:
         raw_df (pd.DataFrame): The raw input dataframe.
+        target_col (str): The name of the target column.
 
     Returns:
         Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]: Train inputs, train targets, val inputs, val targets.
     """
-    train_df, val_df = train_test_split(raw_df, test_size=0.2, random_state=42, stratify=raw_df['Exited'])
+    train_df, val_df = train_test_split(raw_df, test_size=0.2, random_state=42, stratify=raw_df[target_col])
 
-    input_cols = list(train_df.columns)[:-1]
-    target_col = 'Exited'
+    input_cols = list(train_df.columns)
+    input_cols.remove(target_col)
     train_inputs, train_targets = train_df[input_cols].copy(), train_df[target_col].copy()
     val_inputs, val_targets = val_df[input_cols].copy(), val_df[target_col].copy()
 
     return train_inputs, train_targets, val_inputs, val_targets
 
-def select_features(df: pd.DataFrame) -> Tuple[List[str], List[str]]:
+def select_features(df: pd.DataFrame, num_cols_to_drop: List[str], cat_cols_to_drop: List[str]) -> Tuple[List[str], List[str]]:
     """
     Selects numerical and categorical features from the dataframe.
 
     Args:
         df (pd.DataFrame): The input dataframe.
+        num_cols_to_drop (List[str]): List of numerical columns to drop.
+        cat_cols_to_drop (List[str]): List of categorical columns to drop.
 
     Returns:
         Tuple[List[str], List[str]]: Lists of numerical and categorical column names.
     """
     numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
-    numeric_cols = list(filter(lambda x: x not in ('id', 'CustomerId'), numeric_cols))
+    numeric_cols.remove(cols_to_drop)
     categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-    categorical_cols.remove('Surname')
+    categorical_cols.remove(cat_cols_to_drop)
 
     return numeric_cols, categorical_cols
 
@@ -82,20 +85,23 @@ def scale_features(train_df: pd.DataFrame, val_df: pd.DataFrame, numeric_cols: L
 
     return train_df, val_df, scaler
 
-def preprocess_data(raw_df: pd.DataFrame, scale_numeric: bool = False) -> Tuple[Dict[str, pd.DataFrame], List[str], MinMaxScaler, OneHotEncoder]:
+def preprocess_data(raw_df: pd.DataFrame, target_col: str, num_cols_to_drop: List[str], cat_cols_to_drop: List[str], scale_numeric: bool = False) -> Tuple[Dict[str, pd.DataFrame], List[str], MinMaxScaler, OneHotEncoder]:
     """
     Prepares the data for training and validation.
 
     Args:
         raw_df (pd.DataFrame): The raw input dataframe.
+        target_col (str): The name of the target column.
+        num_cols_to_drop (List[str]): List of numerical columns to drop.
+        cat_cols_to_drop (List[str]): List of categorical columns to drop.
         scale_numeric (bool): Flag to indicate whether to scale numerical features.
 
     Returns:
         Tuple[Dict[str, pd.DataFrame], List[str], MinMaxScaler, OneHotEncoder]:
         Dictionary containing training and validation inputs and targets, list of input column names, scaler, and encoder.
     """
-    train_inputs, train_targets, val_inputs, val_targets = split_data(raw_df)
-    numeric_cols, categorical_cols = select_features(train_inputs)
+    train_inputs, train_targets, val_inputs, val_targets = split_data(raw_df, target_col)
+    numeric_cols, categorical_cols = select_features(train_inputs, num_cols_to_drop, cat_cols_to_drop)
     train_inputs, val_inputs, encoded_cols, encoder = encode_features(train_inputs, val_inputs, categorical_cols)
 
     scaler = None
