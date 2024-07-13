@@ -37,9 +37,9 @@ def select_features(df: pd.DataFrame, num_cols_to_drop: List[str], cat_cols_to_d
         Tuple[List[str], List[str]]: Lists of numerical and categorical column names.
     """
     numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
-    numeric_cols.remove(num_cols_to_drop)
+    numeric_cols = list(filter(lambda x: x not in num_cols_to_drop, numeric_cols))
     categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
-    categorical_cols.remove(cat_cols_to_drop)
+    categorical_cols = list(filter(lambda x: x not in cat_cols_to_drop, categorical_cols))
 
     return numeric_cols, categorical_cols
 
